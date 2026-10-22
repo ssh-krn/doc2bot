@@ -8,7 +8,7 @@ class Settings(BaseSettings):
 
     llm_provider: str = "groq"  # "groq" or "mistral"
     groq_api_key: str = ""
-    groq_model: str = "llama-3.3-70b-versatile"
+    groq_model: str = "openai/gpt-oss-120b"
     mistral_api_key: str = ""
     mistral_model: str = "mistral-small-latest"
 

@@ -79,7 +79,7 @@ def chat(req: ChatRequest):
         try:
             for event in answer_stream(store, req.question):
                 yield json.dumps(event) + "\n"
-        except RuntimeError as e:  # e.g. missing API key
+        except RuntimeError as e:
             yield json.dumps({"type": "error", "data": str(e)}) + "\n"
 
     return StreamingResponse(events(), media_type="application/x-ndjson")
