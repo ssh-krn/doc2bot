@@ -1,6 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { streamChat } from "../api/client";
-import type { ChatMessage } from "../types";
+import type { ChatMessage, PipelineSettings } from "../types";
 
 let idCounter = 0;
 const newId = () => `msg-${++idCounter}`;
@@ -21,7 +21,7 @@ export function useChat() {
   }, []);
 
   const send = useCallback(
-    async (question: string) => {
+    async (question: string, settings: PipelineSettings) => {
       const q = question.trim();
       if (!q || busy) return;
 
@@ -30,17 +30,24 @@ export function useChat() {
       setBusy(true);
       setMessages((prev) => [
         ...prev,
-        { id: newId(), role: "user", text: q, sources: [], status: "done" },
-        { id: newId(), role: "assistant", text: "", sources: [], status: "streaming" },
+        { id: newId(), role: "user", text: q, sources: [], facts: [], notes: [], status: "done" },
+        { id: newId(), role: "assistant", text: "", sources: [], facts: [], notes: [], status: "streaming" },
       ]);
 
       try {
         await streamChat(
           q,
+          settings,
           (event) => {
             switch (event.type) {
               case "sources":
                 patchLast((m) => ({ ...m, sources: event.data }));
+                break;
+              case "note":
+                patchLast((m) => ({ ...m, notes: [...m.notes, event.data] }));
+                break;
+              case "facts":
+                patchLast((m) => ({ ...m, facts: event.data }));
                 break;
               case "token":
                 patchLast((m) => ({ ...m, text: m.text + event.data }));

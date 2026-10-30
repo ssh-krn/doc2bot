@@ -1,0 +1,12 @@
+add a about section
+in the about section there will be sub sections
+sub sections
+- describing the methods and techniques I used for the app which makes it stand out like hybrid search
+- eval results
+- with the main about explaining the workflow of the project
+
+in the chat section make the latency visible
+add a thumbs up and thumbs down button
+
+the website should support all types of documents - PDFs, Office documents (DOC/DOCX/PPT/PPTX/XLS/XLSX) and images
+for reference and ease of use, the RAG app logic and workflow should be based on - https://github.com/hkuds/rag-anything

@@ -1,6 +1,5 @@
-"""Hybrid retrieval: dense (Qdrant) + keyword (BM25) fused with reciprocal rank
-fusion, optionally reranked by a cross-encoder. Modes and reranking are switchable
-so the evaluation can run ablations on the same index."""
+"""Chunk index: dense vectors (Qdrant) + BM25, fused with reciprocal rank fusion, then reranked.
+The knowledge graph (app/kg) uses this index for chunk lookup and reranking."""
 
 import re
 import uuid
@@ -63,13 +62,14 @@ class Index:
     def _rebuild_bm25(self) -> None:
         self.bm25 = BM25Okapi([tokenize(c["text"]) for c in self.chunks]) if self.chunks else None
 
-    def add_document(self, doc_id: str, filename: str, chunks: list[dict]) -> None:
+    def add_document(self, doc_id: str, filename: str, chunks: list[dict]) -> list[str]:
+        """Indexes chunks and returns their ids, in the same order as `chunks`."""
         if not chunks:
-            return
+            return []
         vectors = self.embedder.encode(
             [c["text"] for c in chunks], normalize_embeddings=True, batch_size=32
         )
-        points, new = [], []
+        points, new, ids = [], [], []
         for c, v in zip(chunks, vectors):
             pid = str(uuid.uuid4())
             payload = {
@@ -78,13 +78,19 @@ class Index:
                 "filename": filename,
                 "page": c["page"],
                 "chunk_index": c["chunk_index"],
+                "modality": c.get("modality", "text"),
+                "image_key": c.get("image_key") or "",
+                "parent_id": c.get("parent_id") or f"self-{pid}",
+                "parent_text": c.get("parent_text") or c["text"],
             }
             points.append(PointStruct(id=pid, vector=[float(x) for x in v], payload=payload))
             new.append({"id": pid, **payload})
+            ids.append(pid)
         with self.lock:
             self.client.upsert(self.collection, points=points)
             self.chunks.extend(new)
             self._rebuild_bm25()
+        return ids
 
     def delete_document(self, doc_id: str) -> None:
         flt = Filter(must=[FieldCondition(key="doc_id", match=MatchValue(value=doc_id))])
@@ -92,6 +98,19 @@ class Index:
             self.client.delete(self.collection, points_selector=FilterSelector(filter=flt))
             self.chunks = [c for c in self.chunks if c["doc_id"] != doc_id]
             self._rebuild_bm25()
+
+    def chunk_ids_for_doc(self, doc_id: str) -> list[str]:
+        with self.lock:
+            return [c["id"] for c in self.chunks if c["doc_id"] == doc_id]
+
+    def image_keys_for_doc(self, doc_id: str) -> list[str]:
+        with self.lock:
+            return [c["image_key"] for c in self.chunks if c["doc_id"] == doc_id and c.get("image_key")]
+
+    def get_chunks(self, ids: list[str]) -> list[dict]:
+        with self.lock:
+            by_id = {c["id"]: c for c in self.chunks}
+        return [by_id[i] for i in ids if i in by_id]
 
     def list_documents(self) -> list[dict]:
         docs: dict[str, dict] = {}
@@ -103,9 +122,24 @@ class Index:
             d["chunks"] += 1
             d["pages"].add(c["page"])
         return [
-            {"doc_id": d["doc_id"], "filename": d["filename"], "chunks": d["chunks"], "pages": len(d["pages"])}
+            {
+                "doc_id": d["doc_id"],
+                "filename": d["filename"],
+                "kind": d["filename"].rsplit(".", 1)[-1].lower() if "." in d["filename"] else "",
+                "chunks": d["chunks"],
+                "pages": len(d["pages"]),
+            }
             for d in docs.values()
         ]
+
+    def rerank(self, query: str, chunks: list[dict]) -> list[tuple[dict, float]]:
+        """Cross-encoder scores for chunks, best first. Without a reranker, keeps the input order."""
+        if not chunks:
+            return []
+        if self.reranker is None:
+            return [(c, 1.0 / (i + 1)) for i, c in enumerate(chunks)]
+        raw = self.reranker.predict([(query, c["text"]) for c in chunks])
+        return sorted(zip(chunks, (float(x) for x in raw)), key=lambda x: x[1], reverse=True)
 
     def search(
         self,
@@ -144,11 +178,7 @@ class Index:
         pool = [by_id[i] for i in ranked_ids[:candidates] if i in by_id]
         if not pool:
             return []
-
-        use_rerank = rerank and self.reranker is not None
-        if use_rerank:
-            raw = self.reranker.predict([(query, c["text"]) for c in pool])
-            scored = sorted(zip(pool, [float(x) for x in raw]), key=lambda x: x[1], reverse=True)
-        else:
-            scored = [(c, 1.0 / (rank + 1)) for rank, c in enumerate(pool)]
-        return [{**c, "score": s, "reranked": use_rerank} for c, s in scored[:k]]
+        if rerank and self.reranker is not None:
+            scored = self.rerank(query, pool)
+            return [{**c, "score": s, "reranked": True} for c, s in scored[:k]]
+        return [{**c, "score": 1.0 / (rank + 1), "reranked": False} for rank, c in enumerate(pool[:k])]

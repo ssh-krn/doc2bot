@@ -1,4 +1,5 @@
 import type { DocumentInfo } from "../types";
+import { kindLabel } from "../lib/fileTypes";
 
 interface Props {
   docs: DocumentInfo[];
@@ -17,7 +18,7 @@ export function DocumentList({ docs, loading, onRemove }: Props) {
           <div className="doc-meta">
             <strong title={d.filename}>{d.filename}</strong>
             <small>
-              {d.pages} pages · {d.chunks} chunks
+              <span className="kind">{kindLabel(d.kind)}</span> · {d.pages} pages · {d.chunks} chunks
             </small>
           </div>
           <button

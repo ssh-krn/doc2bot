@@ -1,3 +1,5 @@
+import { ACCEPT_ATTRIBUTE } from "../lib/fileTypes";
+
 interface Props {
   disabled: boolean;
   onFile: (file: File) => Promise<void>;
@@ -8,7 +10,7 @@ export function UploadButton({ disabled, onFile }: Props) {
     <label className={`upload${disabled ? " is-disabled" : ""}`}>
       <input
         type="file"
-        accept="application/pdf"
+        accept={ACCEPT_ATTRIBUTE}
         disabled={disabled}
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -16,7 +18,7 @@ export function UploadButton({ disabled, onFile }: Props) {
           if (file) void onFile(file);
         }}
       />
-      {disabled ? "Indexing…" : "Upload PDF"}
+      {disabled ? "Indexing…" : "Upload document"}
     </label>
   );
 }

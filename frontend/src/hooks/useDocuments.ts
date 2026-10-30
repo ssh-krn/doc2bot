@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { deleteDocument, listDocuments, uploadDocument } from "../api/client";
+import { isSupportedFile } from "../lib/fileTypes";
 import type { DocumentInfo } from "../types";
 
 const errorText = (e: unknown, fallback: string) => (e instanceof Error ? e.message : fallback);
@@ -44,6 +45,10 @@ export function useDocuments() {
 
   const upload = useCallback(
     async (file: File) => {
+      if (!isSupportedFile(file.name)) {
+        setError(`"${file.name}" is not a supported file type.`);
+        return;
+      }
       setUploading(true);
       setError(null);
       try {

@@ -11,6 +11,16 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
 
   return (
     <div className={classes}>
+      {message.notes.length > 0 && (
+        <details className="notes">
+          <summary>What the pipeline did ({message.notes.length})</summary>
+          <ul>
+            {message.notes.map((n, i) => (
+              <li key={i}>{n}</li>
+            ))}
+          </ul>
+        </details>
+      )}
       {message.text ? (
         <CitedAnswer text={message.text} sources={message.sources} messageId={message.id} />
       ) : message.status === "streaming" ? (
@@ -18,6 +28,16 @@ export function MessageBubble({ message }: { message: ChatMessage }) {
           Thinking…
         </span>
       ) : null}
+      {message.facts.length > 0 && (
+        <details className="facts">
+          <summary>Knowledge graph facts ({message.facts.length})</summary>
+          <ul>
+            {message.facts.map((f, i) => (
+              <li key={i}>{f}</li>
+            ))}
+          </ul>
+        </details>
+      )}
       {message.sources.length > 0 && <SourceList messageId={message.id} sources={message.sources} />}
     </div>
   );

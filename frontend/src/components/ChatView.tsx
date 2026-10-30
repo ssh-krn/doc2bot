@@ -1,17 +1,21 @@
 import { useEffect, useRef } from "react";
-import type { ChatMessage } from "../types";
+import type { ChatMessage, OptionsCatalog, PipelineSettings } from "../types";
 import { ChatInput } from "./ChatInput";
 import { MessageBubble } from "./MessageBubble";
+import { PipelinePanel } from "./PipelinePanel";
 
 interface Props {
   messages: ChatMessage[];
   busy: boolean;
   canAsk: boolean;
+  catalog: OptionsCatalog | null;
+  settings: PipelineSettings;
+  onSettings: (next: PipelineSettings) => void;
   onSend: (question: string) => Promise<void>;
   onCancel: () => void;
 }
 
-export function ChatView({ messages, busy, canAsk, onSend, onCancel }: Props) {
+export function ChatView({ messages, busy, canAsk, catalog, settings, onSettings, onSend, onCancel }: Props) {
   const endRef = useRef<HTMLDivElement>(null);
 
   // `messages` is intentionally a dependency: the effect should run whenever a message changes.
@@ -25,7 +29,7 @@ export function ChatView({ messages, busy, canAsk, onSend, onCancel }: Props) {
       <div className="messages">
         {messages.length === 0 && (
           <p className="muted empty">
-            {canAsk ? "Ask a question about your documents." : "Upload a PDF to start asking questions."}
+            {canAsk ? "Ask a question about your documents." : "Upload a document to start asking questions."}
           </p>
         )}
         {messages.map((m) => (
@@ -33,7 +37,14 @@ export function ChatView({ messages, busy, canAsk, onSend, onCancel }: Props) {
         ))}
         <div ref={endRef} />
       </div>
-      <ChatInput disabled={!canAsk || busy} busy={busy} onSend={onSend} onCancel={onCancel} />
+      <div className="composer">
+        {catalog ? (
+          <PipelinePanel catalog={catalog} value={settings} onChange={onSettings} disabled={busy} />
+        ) : (
+          <p className="muted small">Loading pipeline options…</p>
+        )}
+        <ChatInput disabled={!canAsk || busy || !catalog} busy={busy} onSend={onSend} onCancel={onCancel} />
+      </div>
     </section>
   );
 }

@@ -1,4 +1,4 @@
-import type { ChatEvent, DocumentInfo } from "../types";
+import type { ChatEvent, DocumentInfo, OptionsCatalog, PipelineSettings } from "../types";
 import { readNdjson } from "./ndjson";
 
 const BASE = "/api";
@@ -13,6 +13,12 @@ async function errorMessage(res: Response): Promise<string> {
     // Body wasn't JSON; fall through to the status text.
   }
   return res.statusText || `Request failed (HTTP ${res.status})`;
+}
+
+export async function getOptions(signal?: AbortSignal): Promise<OptionsCatalog> {
+  const res = await fetch(`${BASE}/options`, { signal });
+  if (!res.ok) throw new Error(await errorMessage(res));
+  return (await res.json()) as OptionsCatalog;
 }
 
 export async function listDocuments(signal?: AbortSignal): Promise<DocumentInfo[]> {
@@ -36,13 +42,20 @@ export async function deleteDocument(docId: string): Promise<void> {
 
 export async function streamChat(
   question: string,
+  settings: PipelineSettings,
   onEvent: (event: ChatEvent) => void,
   signal?: AbortSignal,
 ): Promise<void> {
   const res = await fetch(`${BASE}/chat`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ question }),
+    body: JSON.stringify({
+      question,
+      mode: settings.mode,
+      lightrag_mode: settings.lightrag_mode,
+      techniques: settings.techniques,
+      rerankers: settings.rerankers,
+    }),
     signal,
   });
   if (!res.ok) throw new Error(await errorMessage(res));
