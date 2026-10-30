@@ -1,4 +1,4 @@
-import { ablationRows, answerSummary, type AblationRow, type AnswerSummary } from "../data/evalResults";
+import { type AblationRow, type AnswerSummary } from "../data/evalResults";
 
 const pct = (v: number) => `${(v * 100).toFixed(0)}%`;
 const ms = (v: number) => `${Math.round(v)} ms`;
@@ -79,35 +79,32 @@ function AnswerTable({ s }: { s: AnswerSummary }) {
   );
 }
 
-export function EvalResults() {
-  if (!ablationRows && !answerSummary) {
-    return (
-      <div className="notice">
-        <strong>Not measured yet.</strong> The results come from the backend evaluation harness, run on a question set
-        written against your own documents. Once it runs, copy <code>ablation.json</code> and{" "}
-        <code>answer_eval.json</code> from <code>backend/eval/results/</code> into <code>frontend/src/data/</code> and
-        rebuild. Results appear here automatically.
-      </div>
-    );
-  }
-  return (
-    <div className="eval">
-      {answerSummary && (
-        <>
-          <h4>End-to-end answers</h4>
-          <AnswerTable s={answerSummary} />
-        </>
-      )}
-      {ablationRows && (
-        <>
-          <h4>Retrieval ablation</h4>
-          <AblationTable rows={ablationRows} />
-        </>
-      )}
-      <p className="muted small">
-        These figures come from one question set and one corpus. A small set gives wide error bars, so read them as
-        indicators for these documents, not as general performance.
-      </p>
-    </div>
-  );
-}
+// export function EvalResults() {
+//   if (!ablationRows && !answerSummary) {
+//     return (
+//       <div className="notice">
+
+//       </div>
+//     );
+//   }
+//   return (
+//     <div className="eval">
+//       {answerSummary && (
+//         <>
+//           <h4>End-to-end answers</h4>
+//           <AnswerTable s={answerSummary} />
+//         </>
+//       )}
+//       {ablationRows && (
+//         <>
+//           <h4>Retrieval ablation</h4>
+//           <AblationTable rows={ablationRows} />
+//         </>
+//       )}
+//       <p className="muted small">
+//         These figures come from one question set and one corpus. A small set gives wide error bars, so read them as
+//         indicators for these documents, not as general performance.
+//       </p>
+//     </div>
+//   );
+// }

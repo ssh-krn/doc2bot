@@ -1,5 +1,6 @@
 import { EvalResults } from "./EvalResults";
-import { MODES, METHODS_NOTE, RERANKERS, TECHNIQUES, WORKFLOW, type Item } from "./content";
+import { SupportMatrix } from "./SupportMatrix";
+import { METHODS_NOTE, MODES, RERANKERS, TECHNIQUES, WORKFLOW, type Item } from "./content";
 
 function ItemCard({ item }: { item: Item }) {
   return (
@@ -38,7 +39,7 @@ export function AboutPage() {
           <a href="#modes">RAG modes</a>
           <a href="#techniques">Retrieval techniques</a>
           <a href="#rerankers">Rerankers</a>
-          <a href="#evaluation">Evaluation results</a>
+          <a href="#matrix">Support and evidence matrix</a>
         </nav>
       </header>
 
@@ -94,14 +95,16 @@ export function AboutPage() {
         </div>
       </section>
 
-      <section id="evaluation">
-        <h3>Evaluation results</h3>
+      <section id="matrix">
+        <h3>Support and evidence matrix</h3>
         <p>
-          Retrieval and answers are scored against a question set labelled with the passages that answer each question.
-          Recall measures whether the right passage was found. Answer accuracy checks that the answer includes the
-          required facts. Citation error rate measures how often a citation points to a passage that doesn't support the
-          claim. Comparing modes needs the same question set run through each one.
+          The matrix sets what each mode, technique and reranker is claimed to do against independent checks, then shows
+          how the two models in this build fit each one. Evidence strength is my reading of the sources, not a score.
         </p>
+        <SupportMatrix />
+      </section>
+
+      <section id="evaluation">
         <EvalResults />
       </section>
     </article>
