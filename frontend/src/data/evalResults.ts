@@ -1,27 +1,28 @@
-// Evaluation results written by the backend harness (backend/eval/results/).
-// Copy these files into this folder to show them on the About page:
-//   ablation.json     <- backend/eval/results/ablation.json
-//   answer_eval.json  <- backend/eval/results/answer_eval.json
-// Vite loads any JSON placed here. If a file is missing, the About page says the results aren't measured yet.
+// Evaluation results for the About page. Source: backend/eval/results/ (run_eval).
+// ablation.json: retrieval rows. Fields that were not measured are null and show as "–".
+// answer_eval.json: end-to-end answers. Only Traditional RAG has been run so far.
+// To update, copy the new files from backend/eval/results/ into this folder and rebuild.
 
 export interface AblationRow {
   chunk_size: number;
-  mode: string;           // e.g. dense | bm25 | hybrid | kg-local | kg-global | kg-hybrid
+  mode: string;            // dense | bm25 | hybrid
   rerank: boolean;
-  label_coverage: number; // share of questions whose gold passage exists in at least one chunk
-  "recall@1": number;
-  "recall@3": number;
-  "recall@5": number;
-  "mrr@5": number;
-  p50_ms: number;
-  p95_ms: number;
+  label_coverage: number;  // share of questions whose gold passages exist in some chunk
+  "recall@1": number | null;
+  "recall@3": number | null;
+  "recall@5": number | null;
+  "mrr@5": number | null;
+  p50_ms: number | null;
+  p95_ms: number | null;
 }
 
 export interface AnswerSummary {
+  mode: string;
   chunk_size: number;
   questions: number;
   answer_accuracy_answerable: number;
   refusal_accuracy_unanswerable: number;
+  answer_accuracy_by_type?: Record<string, number>;
   citation_error_rate: number;
   retrieval_p50_ms: number;
   llm_p50_ms: number;

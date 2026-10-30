@@ -1,5 +1,5 @@
-import re
 import json
+import re
 from pathlib import Path
 
 
@@ -10,18 +10,41 @@ def norm(s: str) -> str:
 
 
 def load_qa(path: str) -> list[dict]:
-    lines = Path(path).read_text(encoding="utf-8").splitlines()
-    return [json.loads(line) for line in lines if line.strip()]
+    """Loads questions. Each item gets `golds` (a list of passages). The older single-passage fields
+    (gold_doc, gold_page, gold_snippet) are still accepted, and an item without a `type` gets one from answerable."""
+    items = []
+    for line in Path(path).read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        it = json.loads(line)
+        if "golds" not in it:
+            it["golds"] = (
+                [{"doc": it["gold_doc"], "page": it["gold_page"], "snippet": it["gold_snippet"]}]
+                if it.get("gold_snippet") else []
+            )
+        it.setdefault("answerable", bool(it["golds"]))
+        it.setdefault("type", "fact" if it["answerable"] else "unanswerable")
+        it.setdefault("gold_answer_keywords", [])
+        items.append(it)
+    return items
+
+
+def matches(chunk: dict, gold: dict) -> bool:
+    """A retrieved chunk supports a gold passage if it comes from the gold page and contains the gold snippet.
+    Matching on text rather than chunk id keeps labels valid across chunk sizes."""
+    return (
+        chunk.get("filename") == gold["doc"]
+        and chunk.get("page") == gold["page"]
+        and norm(gold["snippet"]) in norm(chunk.get("text", ""))
+    )
 
 
 def is_gold_chunk(chunk: dict, qa: dict) -> bool:
-    """A retrieved chunk counts as relevant if it comes from the gold page and contains the gold snippet.
-    Matching on the snippet (not chunk id) keeps labels valid across different chunk sizes."""
-    return (
-        chunk["filename"] == qa["gold_doc"]
-        and chunk["page"] == qa["gold_page"]
-        and norm(qa["gold_snippet"]) in norm(chunk["text"])
-    )
+    return any(matches(chunk, g) for g in qa["golds"])
+
+
+def all_golds_found(chunks: list[dict], qa: dict) -> bool:
+    return bool(qa["golds"]) and all(any(matches(c, g) for c in chunks) for g in qa["golds"])
 
 
 def percentile(values: list[float], p: float) -> float:

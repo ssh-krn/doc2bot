@@ -225,3 +225,36 @@ When several rerankers are chosen, their rankings are fused with reciprocal rank
 - Contextual compression and sentence window score sentences with the reranker rather than an LLM.
 - FlashRank and Cohere adapters are untested against the live libraries.
 - Latency rises with the number of model calls per mode. Measure before enabling CRAG, Self-RAG or agentic mode on large documents.
+
+## Machine learning evaluation set
+
+The repository includes a corpus and 50 questions so the evaluation can run without writing your own data.
+
+- **Corpus:** six short lecture-style documents (two pages each) in `eval/corpus_src/`, rendered to PDF by `python -m eval.build_corpus`. Topics: ML basics, regression, decision trees and ensembles, neural networks and backpropagation, CNNs, RNNs and transformers, and evaluation and training practice. Deep learning is covered in the neural network, CNN/RNN and practice documents.
+- **Questions:** `eval/qa.jsonl`, written by `python -m eval.build_qa`. 50 questions: 36 single-passage (definition, fact, comparison, numeric), 6 multi-hop (each needs passages from two documents), and 8 unanswerable (the corpus doesn't cover them, so a good system refuses).
+- **Labels:** each answerable question lists gold passages (`golds`: doc, page, snippet). `python -m eval.validate_qa` checks every snippet against its rendered page and every keyword against its gold passages, and fails on any mismatch.
+
+**Schema change:** questions now carry `golds`, a list of passages, instead of one `gold_doc`/`gold_page`/`gold_snippet`. The old fields are still read. A multi-hop question counts as retrieved only when every passage is in the top k.
+
+### Running it
+
+```bash
+./run_all.sh              # tests, build, validate, BM25 retrieval (no models, no keys)
+./run_all.sh --models     # adds dense, hybrid and reranked retrieval (downloads models once)
+./run_all.sh --answers    # adds answers and a comparison of modes (needs GROQ_API_KEY or MISTRAL_API_KEY)
+```
+
+Results go to `eval/results/`: `ablation.md` (retrieval, with recall by question type), `answer_eval.json` and `failures_<mode>.jsonl` (answers), and `compare.md` when several modes run.
+
+### Reading the results
+
+- **Label coverage** is the share of questions whose gold passages exist in some chunk. A coverage below 100% means chunking split an answer, so no retriever can find it at that chunk size. This is a limit of the chunker, not the retriever.
+- **Recall by type** shows where a method fails. Multi-hop questions are the hardest, since they need two separate passages in the top k.
+- **Accuracy** on answerable questions counts a question correct only if every answer keyword appears and the system did not refuse. Keyword matching is crude. Use a judge model or manual checks before quoting an accuracy figure.
+
+### Known limits
+
+- The corpus is small and written for this evaluation, so it tests whether a method works, not how it performs on real documents.
+- Only one question is `numeric`. Most of the corpus is conceptual.
+- Keyword answer matching can accept a wrong answer that happens to contain a keyword.
+- Lexical-only runs measure BM25 retrieval. Answers need the embedding models and a chat model.

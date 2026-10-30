@@ -1,0 +1,25 @@
+{
+  "summary": {
+    "mode": "traditional",
+    "chunk_size": 800,
+    "questions": 50,
+    "answer_accuracy_answerable": 0.8571428571428571,
+    "refusal_accuracy_unanswerable": 1.0,
+    "answer_accuracy_by_type": {
+      "comparison": 0.875,
+      "definition": 0.9230769230769231,
+      "fact": 0.7857142857142857,
+      "multi_hop": 0.8333333333333334,
+      "numeric": 1.0
+    },
+    "citation_error_rate": 0.1111111111111111,
+    "retrieval_p50_ms": 406.48969700032467,
+    "llm_p50_ms": 1138.4308890001194,
+    "llm_p95_ms": 7248.565642000358,
+    "mean_input_tokens": 335.22,
+    "mean_output_tokens": 129.92,
+    "cost_per_query_usd": 0.0,
+    "cost_per_1000_queries_usd": 0.0
+  },
+  "results": []
+}

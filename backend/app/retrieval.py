@@ -66,8 +66,10 @@ class Index:
         """Indexes chunks and returns their ids, in the same order as `chunks`."""
         if not chunks:
             return []
-        vectors = self.embedder.encode(
-            [c["text"] for c in chunks], normalize_embeddings=True, batch_size=32
+        # With no embedder (lexical-only evaluation), chunks are indexed for BM25 only.
+        vectors = (
+            self.embedder.encode([c["text"] for c in chunks], normalize_embeddings=True, batch_size=32)
+            if self.embedder is not None else [None] * len(chunks)
         )
         points, new, ids = [], [], []
         for c, v in zip(chunks, vectors):
@@ -83,11 +85,13 @@ class Index:
                 "parent_id": c.get("parent_id") or f"self-{pid}",
                 "parent_text": c.get("parent_text") or c["text"],
             }
-            points.append(PointStruct(id=pid, vector=[float(x) for x in v], payload=payload))
+            if v is not None:
+                points.append(PointStruct(id=pid, vector=[float(x) for x in v], payload=payload))
             new.append({"id": pid, **payload})
             ids.append(pid)
         with self.lock:
-            self.client.upsert(self.collection, points=points)
+            if points:
+                self.client.upsert(self.collection, points=points)
             self.chunks.extend(new)
             self._rebuild_bm25()
         return ids
@@ -151,12 +155,14 @@ class Index:
     ) -> list[dict]:
         if mode not in ("dense", "bm25", "hybrid"):
             raise ValueError(f"unknown mode: {mode}")
+        if mode == "dense" and self.embedder is None:
+            raise ValueError("dense search needs an embedder; this index is lexical-only")
         with self.lock:
             if not self.chunks:
                 return []
             dense_ids: list[str] = []
             bm25_ids: list[str] = []
-            if mode in ("dense", "hybrid"):
+            if mode in ("dense", "hybrid") and self.embedder is not None:
                 qv = [float(x) for x in self.embedder.encode(query, normalize_embeddings=True)]
                 hits = self.client.query_points(
                     self.collection, query=qv, limit=candidates, with_payload=False
